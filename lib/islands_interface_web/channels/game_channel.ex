@@ -43,7 +43,6 @@ defmodule IslandsInterface.GameChannel do
     case Game.position_island(via(socket.topic), player, island, row, col) do
       :ok -> {:reply, :ok, socket}
       {:error, reason} -> {:reply, {:error, %{reason: inspect(reason)}}, socket}
-      :error -> {:reply, :error, socket}
     end
   end
 
@@ -54,7 +53,23 @@ defmodule IslandsInterface.GameChannel do
         broadcast!(socket, "player_set_islands", %{player: player})
         {:noreply, socket}
       {:error, reason} -> {:reply, {:error, %{reason: inspect(reason)}}, socket}
-      :error -> {:reply, :error, socket}
+    end
+  end
+
+  def handle_in("guess_coordinate", params, socket) do
+    %{"player" => player, "row" => row, "col" => col} = params
+    player = String.to_existing_atom(player)
+    case Game.guess_coordinate(via(socket.topic), player, row, col) do
+      {:hit, island, win} ->
+        result = %{hit: true, island: island, win: win}
+        broadcast!(socket, "player_guessed_coordinate", %{player: player, result: result})
+        {:noreply, socket}
+      {:miss, island, win} ->
+        result = %{hit: false, island: island, win: win}
+        broadcast!(socket, "player_guessed_coordinate", %{player: player, result: result})
+        {:noreply, socket}
+      {:error, reason} ->
+        {:reply, {:error, %{player: player, reason: inspect(reason)}}, socket}
     end
   end
 
@@ -139,3 +154,16 @@ end
 # game_channel.on("player_set_islands", response => {
 #   console.log("Player Set Islands", response)
 # })
+#
+# function guess_coordinate(channel, player, row, col) {
+#   var params = {"player": player, "row": row, "col": col}
+#   channel.push("guess_coordinate", params)
+#   .receive("error", response => {
+#     console.log("Unable to guess a coordinate: " + player, response)
+#   })
+# }
+#
+# game_channel.on("player_guessed_coordinate", response => {
+#   console.log("Player Guessed Coordinate: ", response.result)
+# })
+
