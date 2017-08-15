@@ -36,6 +36,17 @@ defmodule IslandsInterface.GameChannel do
     end
   end
 
+  def handle_in("position_island", payload, socket) do
+    %{"player" => player, "island" => island, "row" => row, "col" => col} = payload
+    player = String.to_existing_atom(player)
+    island = String.to_existing_atom(island)
+    case Game.position_island(via(socket.topic), player, island, row, col) do
+      :ok -> {:reply, :ok, socket}
+      {:error, reason} -> {:reply, {:error, %{reason: inspect(reason)}}, socket}
+      :error -> {:reply, :error, socket}
+    end
+  end
+
   defp via("game:" <> player), do: Game.via_tuple(player)
 end
 
@@ -99,4 +110,10 @@ end
 #   })
 #
 # }
-
+#
+# function position_island(channel, player, island, row, col) {
+#     var params = {"player": player, "island": island, "row": row, "col": col}
+#     channel.push("position_island", params)
+#     .receive("ok", response => { console.log("Island positioned!", response)})
+#     .receive("error", response => { console.log("Unable to position island.")})
+# }
