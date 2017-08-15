@@ -2,20 +2,22 @@ defmodule IslandsInterface.GameChannel do
   use IslandsInterfaceWeb, :channel
 
   alias IslandsEngine.Game
+  alias IslandsInterfaceWeb.Presence
 
-  def join("game:" <> _player, _payload, socket) do
+  def join("game:" <> _player, %{"screen_name" => screen_name}, socket) do
+    send(self(), {:after_join, screen_name})
     {:ok, socket}
   end
 
-  def handle_in("hello", payload, socket) do
-    #    {:reply, {:ok, payload}, socket}
-    #
-    #    payload = %{message: "We forced this error."}
-    #    {:reply, {:error, payload}, socket}
-    #
-    #    push(socket, "said_hello", payload)
-    #    {:noreply, socket}
-    broadcast!(socket, "said_hello", payload)
+  def handle_info({:after_join, screen_name}, socket) do
+    {:ok, _} = Presence.track(socket, screen_name, %{
+      online_at: inspect(System.system_time(:seconds))
+    })
+    {:noreply, socket}
+  end
+
+  def handle_in("show_subscribers", _payload, socket) do
+    broadcast!(socket, "subscribers", Presence.list(socket))
     {:noreply, socket}
   end
 
@@ -77,17 +79,17 @@ defmodule IslandsInterface.GameChannel do
 end
 
 # Client code examples:
-#
+
 # var phoenix = require("phoenix")
-#
+
 # var socket = new phoenix.Socket("/socket", {})
-#
+
 # socket.connect()
-#
+
 # function new_channel(player, screen_name) {
 #     return socket.channel("game:" + player, {screen_name: screen_name});
 # }
-#
+
 # function join(channel) {
 #     channel.join()
 #     .receive("ok", response => {
@@ -97,7 +99,11 @@ end
 #         console.log("Unable to join", response)
 #     })
 # }
-#
+
+# game_channel.on("subscribers", response => {
+#   console.log("These players have joined: ", response)
+# })
+
 # function leave(channel) {
 #     channel.leave()
 #     .receive("ok", response => { console.log("Left Successfully!", response)})
