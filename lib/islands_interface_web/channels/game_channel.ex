@@ -26,6 +26,17 @@ defmodule IslandsInterface.GameChannel do
       {:error, reason} -> {:reply, {:error, %{reason: inspect(reason)}}, socket}
     end
   end
+
+  def handle_in("add_player", player, socket) do
+    case Game.add_player(via(socket.topic), player) do
+      :ok ->
+        broadcast!(socket, "player_added", %{message: "New player just joined: " <> player})
+        {:noreply, socket}
+      {:error, reason} -> {:reply, {:error, %{reason: inspect(reason)}}, socket}
+    end
+  end
+
+  defp via("game:" <> player), do: Game.via_tuple(player)
 end
 
 # Client code examples:
@@ -79,5 +90,13 @@ end
 #         console.log("Unable to start a new game.", response)
 #     })
 # }
-
+#
+# function add_player(channel, player) {
+#       channel.push("add_player", player)
+#   .receive("error", response => {
+#             console.log("Unable to add new player: " + player, response)
+#
+#   })
+#
+# }
 
